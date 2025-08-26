@@ -2,8 +2,12 @@ import { MCPTool, logger } from "mcp-framework";
 import * as ynab from "ynab";
 import { z } from "zod";
 
-interface GetUnapprovedTransactionsInput {
+interface GetTransactionsByPayeeInput {
   budgetId?: string;
+  payeeId: string;
+  sinceDate?: string;
+  type?: "uncategorized" | "unapproved";
+  lastKnowledgeOfServer?: number;
 }
 
 interface TransactionOutput
@@ -14,15 +18,31 @@ interface TransactionOutput
   outflow: number;
 }
 
-class GetUnapprovedTransactionsTool extends MCPTool<GetUnapprovedTransactionsInput> {
-  name = "get_unapproved_transactions";
-  description =
-    "Gets unapproved transactions from a budget. First time pulls last 3 days, subsequent pulls use server knowledge to get only changes.";
+class GetTransactionsByPayeeTool extends MCPTool<GetTransactionsByPayeeInput> {
+  name = "get_transactions_by_payee";
+  description = "Lists transactions for a specific payee.";
 
   schema = {
     budgetId: {
       type: z.string().optional(),
-      description: "The ID of the budget to fetch transactions for (optional, defaults to the budget set in the YNAB_BUDGET_ID environment variable)",
+      description: "The ID of the budget (optional, defaults to YNAB_BUDGET_ID env variable)",
+    },
+    payeeId: {
+      type: z.string(),
+      description: "The ID of the payee to retrieve transactions for",
+    },
+    sinceDate: {
+      type: z.string().optional(),
+      description: "Only transactions on or after this date will be included (ISO format)",
+    },
+    type: {
+      type: z.enum(["uncategorized", "unapproved"]).optional(),
+      description: "If specified, only transactions of the given type will be included",
+    },
+    lastKnowledgeOfServer: {
+      type: z.number().optional(),
+      description:
+        "If provided, only transactions changed since this server knowledge will be returned",
     },
   };
 
@@ -31,24 +51,30 @@ class GetUnapprovedTransactionsTool extends MCPTool<GetUnapprovedTransactionsInp
 
   constructor() {
     super();
-    this.api = new ynab.API(process.env.YNAB_API_TOKEN || "");
+    if (!process.env.YNAB_API_TOKEN) {
+      throw new Error(
+        "YNAB_API_TOKEN environment variable is not set. Please set it to a valid YNAB API token."
+      );
+    }
+    this.api = new ynab.API(process.env.YNAB_API_TOKEN);
     this.budgetId = process.env.YNAB_BUDGET_ID || "";
   }
 
-  async execute(input: GetUnapprovedTransactionsInput) {
+  async execute(input: GetTransactionsByPayeeInput) {
     const budgetId = input.budgetId || this.budgetId;
 
     if (!budgetId) {
-      return "No budget ID provided. Please provide a budget ID or set the YNAB_BUDGET_ID environment variable. Use the ListBudgets tool to get a list of available budgets.";
+      return "No budget ID provided. Please provide a budget ID or set the YNAB_BUDGET_ID environment variable.";
     }
 
     try {
-      logger.info(`Getting unapproved transactions for budget ${budgetId}`);
-
-      const response = await this.api.transactions.getTransactions(
+      logger.info(`Fetching transactions for payee ${input.payeeId} in budget ${budgetId}`);
+      const response = await this.api.transactions.getTransactionsByPayee(
         budgetId,
-        undefined,
-        ynab.GetTransactionsTypeEnum.Unapproved
+        input.payeeId,
+        input.sinceDate,
+        input.type as any,
+        input.lastKnowledgeOfServer
       );
 
       const transactions = this.transformTransactions(
@@ -57,14 +83,14 @@ class GetUnapprovedTransactionsTool extends MCPTool<GetUnapprovedTransactionsInp
 
       return {
         transactions,
-        transaction_count: transactions.length,
+        server_knowledge: response.data.server_knowledge,
       };
     } catch (error) {
       logger.error(
-        `Error getting unapproved transactions for budget ${budgetId}:`
+        `Error fetching transactions for payee ${input.payeeId} in budget ${budgetId}:`
       );
       logger.error(JSON.stringify(error, null, 2));
-      return `Error getting unapproved transactions: ${
+      return `Error fetching transactions: ${
         error instanceof Error ? error.message : JSON.stringify(error)
       }`;
     }
@@ -144,4 +170,4 @@ class GetUnapprovedTransactionsTool extends MCPTool<GetUnapprovedTransactionsInp
   }
 }
 
-export default GetUnapprovedTransactionsTool;
+export default GetTransactionsByPayeeTool;

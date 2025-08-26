@@ -45,15 +45,19 @@ class CreateTransactionTool extends MCPTool {
             description: "A memo/note for the transaction (optional)",
         },
         cleared: {
-            type: z.boolean().optional(),
-            description: "Whether the transaction is cleared (optional, defaults to false)",
+            type: z
+                .enum(["cleared", "uncleared", "reconciled"])
+                .optional(),
+            description: "The cleared status of the transaction",
         },
         approved: {
             type: z.boolean().optional(),
             description: "Whether the transaction is approved (optional, defaults to false)",
         },
         flagColor: {
-            type: z.string().optional(),
+            type: z
+                .enum(["red", "orange", "yellow", "green", "blue", "purple"])
+                .optional(),
             description: "The transaction flag color (red, orange, yellow, green, blue, purple) (optional)",
         },
     };
@@ -76,7 +80,7 @@ class CreateTransactionTool extends MCPTool {
                     payee_name: input.payeeName,
                     category_id: input.categoryId,
                     memo: input.memo,
-                    cleared: input.cleared ? ynab.TransactionClearedStatus.Cleared : ynab.TransactionClearedStatus.Uncleared,
+                    cleared: input.cleared,
                     approved: input.approved ?? false,
                     flag_color: input.flagColor,
                 }

@@ -10,18 +10,12 @@ interface ListTransactionsInput {
   paymentsOnly?: boolean;
 }
 
-interface TransactionOutput {
-  id: string;
-  date: string;
-  account_name: string;
-  payee_name?: string | null;
-  category_name?: string | null;
-  memo?: string | null;
+interface TransactionOutput
+  extends Omit<ynab.TransactionDetail, "amount" | "subtransactions"> {
+  amount: number;
+  subtransactions: (Omit<ynab.SubTransaction, "amount"> & { amount: number })[];
   inflow: number;
   outflow: number;
-  cleared: string;
-  approved: boolean;
-  transfer_transaction_id?: string | null;
 }
 
 interface RelatedTransactionGroup {
@@ -158,20 +152,68 @@ class ListTransactionsTool extends MCPTool<ListTransactionsInput> {
   ): TransactionOutput[] {
     return transactions.map((transaction) => {
       const amount = transaction.amount / 1000; // Convert milliunits to actual currency
-      
+      const subtransactions =
+        "subtransactions" in transaction && transaction.subtransactions
+          ? transaction.subtransactions.map((sub: ynab.SubTransaction) => ({
+              ...sub,
+              amount: sub.amount / 1000,
+            }))
+          : [];
+
+      // Preserve human-friendly names in the output even though the update schema
+      // only allows ID-based attributes.
+      const accountName =
+        "account_name" in transaction ? transaction.account_name : undefined;
+      const payeeName =
+        "payee_name" in transaction ? transaction.payee_name : undefined;
+      const categoryName =
+        "category_name" in transaction ? transaction.category_name : undefined;
+
       return {
         id: transaction.id,
         date: transaction.date,
-        account_name: transaction.account_name,
-        payee_name: transaction.payee_name,
-        category_name: transaction.category_name,
-        memo: transaction.memo,
-        inflow: amount > 0 ? amount : 0,
-        outflow: amount < 0 ? Math.abs(amount) : 0,
+        amount,
+        memo: transaction.memo || null,
         cleared: transaction.cleared,
         approved: transaction.approved,
-        transfer_transaction_id: transaction.transfer_transaction_id,
-      };
+        flag_color: "flag_color" in transaction ? transaction.flag_color ?? null : null,
+        flag_name: "flag_name" in transaction ? transaction.flag_name ?? null : null,
+        account_id: transaction.account_id,
+        payee_id: "payee_id" in transaction ? transaction.payee_id ?? null : null,
+        category_id: "category_id" in transaction ? transaction.category_id ?? null : null,
+        transfer_account_id:
+          "transfer_account_id" in transaction
+            ? transaction.transfer_account_id ?? null
+            : null,
+        transfer_transaction_id:
+          "transfer_transaction_id" in transaction
+            ? transaction.transfer_transaction_id ?? null
+            : null,
+        matched_transaction_id:
+          "matched_transaction_id" in transaction
+            ? transaction.matched_transaction_id ?? null
+            : null,
+        import_id: "import_id" in transaction ? transaction.import_id ?? null : null,
+        import_payee_name:
+          "import_payee_name" in transaction
+            ? transaction.import_payee_name ?? null
+            : null,
+        import_payee_name_original:
+          "import_payee_name_original" in transaction
+            ? transaction.import_payee_name_original ?? null
+            : null,
+        debt_transaction_type:
+          "debt_transaction_type" in transaction
+            ? transaction.debt_transaction_type ?? null
+            : null,
+        deleted: "deleted" in transaction ? transaction.deleted ?? false : false,
+        account_name: accountName,
+        payee_name: payeeName,
+        category_name: categoryName,
+        subtransactions,
+        inflow: amount > 0 ? amount : 0,
+        outflow: amount < 0 ? Math.abs(amount) : 0,
+      } as TransactionOutput;
     });
   }
 
