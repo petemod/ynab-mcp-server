@@ -170,11 +170,46 @@ class ListTransactionsTool extends MCPTool<ListTransactionsInput> {
         "category_name" in transaction ? transaction.category_name : undefined;
 
       return {
-        ...transaction,
+        id: transaction.id,
+        date: transaction.date,
+        amount,
+        memo: transaction.memo || null,
+        cleared: transaction.cleared,
+        approved: transaction.approved,
+        flag_color: "flag_color" in transaction ? transaction.flag_color ?? null : null,
+        flag_name: "flag_name" in transaction ? transaction.flag_name ?? null : null,
+        account_id: transaction.account_id,
+        payee_id: "payee_id" in transaction ? transaction.payee_id ?? null : null,
+        category_id: "category_id" in transaction ? transaction.category_id ?? null : null,
+        transfer_account_id:
+          "transfer_account_id" in transaction
+            ? transaction.transfer_account_id ?? null
+            : null,
+        transfer_transaction_id:
+          "transfer_transaction_id" in transaction
+            ? transaction.transfer_transaction_id ?? null
+            : null,
+        matched_transaction_id:
+          "matched_transaction_id" in transaction
+            ? transaction.matched_transaction_id ?? null
+            : null,
+        import_id: "import_id" in transaction ? transaction.import_id ?? null : null,
+        import_payee_name:
+          "import_payee_name" in transaction
+            ? transaction.import_payee_name ?? null
+            : null,
+        import_payee_name_original:
+          "import_payee_name_original" in transaction
+            ? transaction.import_payee_name_original ?? null
+            : null,
+        debt_transaction_type:
+          "debt_transaction_type" in transaction
+            ? transaction.debt_transaction_type ?? null
+            : null,
+        deleted: "deleted" in transaction ? transaction.deleted ?? false : false,
         account_name: accountName,
         payee_name: payeeName,
         category_name: categoryName,
-        amount,
         subtransactions,
         inflow: amount > 0 ? amount : 0,
         outflow: amount < 0 ? Math.abs(amount) : 0,
