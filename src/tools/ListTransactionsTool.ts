@@ -10,18 +10,12 @@ interface ListTransactionsInput {
   paymentsOnly?: boolean;
 }
 
-interface TransactionOutput {
-  id: string;
-  date: string;
-  account_name: string;
-  payee_name?: string | null;
-  category_name?: string | null;
-  memo?: string | null;
+interface TransactionOutput
+  extends Omit<ynab.TransactionDetail, "amount" | "subtransactions"> {
+  amount: number;
+  subtransactions: (Omit<ynab.SubTransaction, "amount"> & { amount: number })[];
   inflow: number;
   outflow: number;
-  cleared: string;
-  approved: boolean;
-  transfer_transaction_id?: string | null;
 }
 
 interface RelatedTransactionGroup {
@@ -158,20 +152,21 @@ class ListTransactionsTool extends MCPTool<ListTransactionsInput> {
   ): TransactionOutput[] {
     return transactions.map((transaction) => {
       const amount = transaction.amount / 1000; // Convert milliunits to actual currency
-      
+      const subtransactions =
+        "subtransactions" in transaction && transaction.subtransactions
+          ? transaction.subtransactions.map((sub: ynab.SubTransaction) => ({
+              ...sub,
+              amount: sub.amount / 1000,
+            }))
+          : [];
+
       return {
-        id: transaction.id,
-        date: transaction.date,
-        account_name: transaction.account_name,
-        payee_name: transaction.payee_name,
-        category_name: transaction.category_name,
-        memo: transaction.memo,
+        ...transaction,
+        amount,
+        subtransactions,
         inflow: amount > 0 ? amount : 0,
         outflow: amount < 0 ? Math.abs(amount) : 0,
-        cleared: transaction.cleared,
-        approved: transaction.approved,
-        transfer_transaction_id: transaction.transfer_transaction_id,
-      };
+      } as TransactionOutput;
     });
   }
 

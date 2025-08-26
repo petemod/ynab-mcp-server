@@ -100,18 +100,18 @@ class ListTransactionsTool extends MCPTool {
     transformTransactions(transactions) {
         return transactions.map((transaction) => {
             const amount = transaction.amount / 1000; // Convert milliunits to actual currency
+            const subtransactions = "subtransactions" in transaction && transaction.subtransactions
+                ? transaction.subtransactions.map((sub) => ({
+                    ...sub,
+                    amount: sub.amount / 1000,
+                }))
+                : [];
             return {
-                id: transaction.id,
-                date: transaction.date,
-                account_name: transaction.account_name,
-                payee_name: transaction.payee_name,
-                category_name: transaction.category_name,
-                memo: transaction.memo,
+                ...transaction,
+                amount,
+                subtransactions,
                 inflow: amount > 0 ? amount : 0,
                 outflow: amount < 0 ? Math.abs(amount) : 0,
-                cleared: transaction.cleared,
-                approved: transaction.approved,
-                transfer_transaction_id: transaction.transfer_transaction_id,
             };
         });
     }

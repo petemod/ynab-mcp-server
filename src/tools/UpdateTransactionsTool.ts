@@ -9,7 +9,6 @@ interface UpdateTransaction {
   date?: string;
   amount?: number;
   payeeId?: string;
-  payeeName?: string;
   categoryId?: string;
   memo?: string;
   cleared?: boolean;
@@ -40,11 +39,10 @@ class UpdateTransactionsTool extends MCPTool<UpdateTransactionsInput> {
             importId: z.string().optional(),
             accountId: z.string().optional(),
             date: z.string().optional(),
-            amount: z.number().optional(),
-            payeeId: z.string().optional(),
-            payeeName: z.string().optional(),
-            categoryId: z.string().optional(),
-            memo: z.string().optional(),
+          amount: z.number().optional(),
+          payeeId: z.string().optional(),
+          categoryId: z.string().optional(),
+          memo: z.string().optional(),
             cleared: z.boolean().optional(),
             approved: z.boolean().optional(),
             flagColor: z.string().optional(),
@@ -93,7 +91,6 @@ class UpdateTransactionsTool extends MCPTool<UpdateTransactionsInput> {
         date: tx.date,
         amount: tx.amount !== undefined ? Math.round(tx.amount * 1000) : undefined,
         payee_id: tx.payeeId,
-        payee_name: tx.payeeName,
         category_id: tx.categoryId,
         memo: tx.memo,
         cleared: clearedStatus,
