@@ -11,9 +11,9 @@ interface CreateTransactionInput {
   payeeName?: string;
   categoryId?: string;
   memo?: string;
-  cleared?: boolean;
+  cleared?: "cleared" | "uncleared" | "reconciled";
   approved?: boolean;
-  flagColor?: string;
+  flagColor?: "red" | "orange" | "yellow" | "green" | "blue" | "purple";
 }
 
 class CreateTransactionTool extends MCPTool<CreateTransactionInput> {
@@ -63,16 +63,21 @@ class CreateTransactionTool extends MCPTool<CreateTransactionInput> {
       description: "A memo/note for the transaction (optional)",
     },
     cleared: {
-      type: z.boolean().optional(),
-      description: "Whether the transaction is cleared (optional, defaults to false)",
+      type: z
+        .enum(["cleared", "uncleared", "reconciled"])
+        .optional(),
+      description: "The cleared status of the transaction",
     },
     approved: {
       type: z.boolean().optional(),
       description: "Whether the transaction is approved (optional, defaults to false)",
     },
     flagColor: {
-      type: z.string().optional(),
-      description: "The transaction flag color (red, orange, yellow, green, blue, purple) (optional)",
+      type: z
+        .enum(["red", "orange", "yellow", "green", "blue", "purple"])
+        .optional(),
+      description:
+        "The transaction flag color (red, orange, yellow, green, blue, purple) (optional)",
     },
   };
 
@@ -99,7 +104,7 @@ class CreateTransactionTool extends MCPTool<CreateTransactionInput> {
           payee_name: input.payeeName,
           category_id: input.categoryId,
           memo: input.memo,
-          cleared: input.cleared ? ynab.TransactionClearedStatus.Cleared : ynab.TransactionClearedStatus.Uncleared,
+          cleared: input.cleared as ynab.TransactionClearedStatus,
           approved: input.approved ?? false,
           flag_color: input.flagColor as ynab.TransactionFlagColor,
         }

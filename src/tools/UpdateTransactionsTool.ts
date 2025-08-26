@@ -18,9 +18,9 @@ interface UpdateTransaction {
   payeeId?: string;
   categoryId?: string;
   memo?: string;
-  cleared?: boolean;
+  cleared?: "cleared" | "uncleared" | "reconciled";
   approved?: boolean;
-  flagColor?: string;
+  flagColor?: "red" | "orange" | "yellow" | "green" | "blue" | "purple";
   subtransactions?: UpdateSubtransaction[];
 }
 
@@ -51,9 +51,13 @@ class UpdateTransactionsTool extends MCPTool<UpdateTransactionsInput> {
             payeeId: z.string().optional(),
             categoryId: z.string().optional(),
             memo: z.string().optional(),
-            cleared: z.boolean().optional(),
+            cleared: z
+              .enum(["cleared", "uncleared", "reconciled"])
+              .optional(),
             approved: z.boolean().optional(),
-            flagColor: z.string().optional(),
+            flagColor: z
+              .enum(["red", "orange", "yellow", "green", "blue", "purple"])
+              .optional(),
             subtransactions: z
               .array(
                 z.object({
@@ -98,13 +102,6 @@ class UpdateTransactionsTool extends MCPTool<UpdateTransactionsInput> {
         return "Each transaction must specify either an id or an importId";
       }
 
-      const clearedStatus =
-        tx.cleared === undefined
-          ? undefined
-          : tx.cleared
-          ? ynab.TransactionClearedStatus.Cleared
-          : ynab.TransactionClearedStatus.Uncleared;
-
       const subtransactions = tx.subtransactions?.map((stx) => ({
         amount: Math.round(stx.amount * 1000),
         payee_id: stx.payeeId,
@@ -121,7 +118,7 @@ class UpdateTransactionsTool extends MCPTool<UpdateTransactionsInput> {
         payee_id: tx.payeeId,
         category_id: tx.categoryId,
         memo: tx.memo,
-        cleared: clearedStatus,
+        cleared: tx.cleared as ynab.TransactionClearedStatus,
         approved: tx.approved,
         flag_color: tx.flagColor as ynab.TransactionFlagColor,
         subtransactions,

@@ -42,7 +42,9 @@ class UpdateScheduledTransactionTool extends MCPTool {
             description: "A memo for the transaction (optional)",
         },
         flagColor: {
-            type: z.string().optional(),
+            type: z
+                .enum(["red", "orange", "yellow", "green", "blue", "purple"])
+                .optional(),
             description: "The transaction flag color (red, orange, yellow, green, blue, purple)",
         },
         frequency: {
