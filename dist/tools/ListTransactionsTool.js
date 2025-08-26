@@ -106,8 +106,16 @@ class ListTransactionsTool extends MCPTool {
                     amount: sub.amount / 1000,
                 }))
                 : [];
+            // Preserve human-friendly names in the output even though the update schema
+            // only allows ID-based attributes.
+            const accountName = "account_name" in transaction ? transaction.account_name : undefined;
+            const payeeName = "payee_name" in transaction ? transaction.payee_name : undefined;
+            const categoryName = "category_name" in transaction ? transaction.category_name : undefined;
             return {
                 ...transaction,
+                account_name: accountName,
+                payee_name: payeeName,
+                category_name: categoryName,
                 amount,
                 subtransactions,
                 inflow: amount > 0 ? amount : 0,
