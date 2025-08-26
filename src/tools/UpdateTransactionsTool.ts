@@ -2,8 +2,15 @@ import { MCPTool, logger } from "mcp-framework";
 import * as ynab from "ynab";
 import { z } from "zod";
 
+interface UpdateSubtransaction {
+  amount: number;
+  payeeId?: string;
+  categoryId?: string;
+  memo?: string;
+}
+
 interface UpdateTransaction {
-  id?: string;
+  id?: string | null;
   importId?: string;
   accountId?: string;
   date?: string;
@@ -14,6 +21,7 @@ interface UpdateTransaction {
   cleared?: boolean;
   approved?: boolean;
   flagColor?: string;
+  subtransactions?: UpdateSubtransaction[];
 }
 
 interface UpdateTransactionsInput {
@@ -35,17 +43,27 @@ class UpdateTransactionsTool extends MCPTool<UpdateTransactionsInput> {
       type: z
         .array(
           z.object({
-            id: z.string().optional(),
+            id: z.string().nullable().optional(),
             importId: z.string().optional(),
             accountId: z.string().optional(),
             date: z.string().optional(),
-          amount: z.number().optional(),
-          payeeId: z.string().optional(),
-          categoryId: z.string().optional(),
-          memo: z.string().optional(),
+            amount: z.number().optional(),
+            payeeId: z.string().optional(),
+            categoryId: z.string().optional(),
+            memo: z.string().optional(),
             cleared: z.boolean().optional(),
             approved: z.boolean().optional(),
             flagColor: z.string().optional(),
+            subtransactions: z
+              .array(
+                z.object({
+                  amount: z.number(),
+                  payeeId: z.string().optional(),
+                  categoryId: z.string().optional(),
+                  memo: z.string().optional(),
+                })
+              )
+              .optional(),
           })
         )
         .min(1),
@@ -73,6 +91,9 @@ class UpdateTransactionsTool extends MCPTool<UpdateTransactionsInput> {
     const transactions: ynab.SaveTransactionWithIdOrImportId[] = [];
 
     for (const tx of input.transactions) {
+      if (tx.id && tx.importId) {
+        return "Each transaction must specify either an id or an importId, but not both";
+      }
       if (!tx.id && !tx.importId) {
         return "Each transaction must specify either an id or an importId";
       }
@@ -84,8 +105,15 @@ class UpdateTransactionsTool extends MCPTool<UpdateTransactionsInput> {
           ? ynab.TransactionClearedStatus.Cleared
           : ynab.TransactionClearedStatus.Uncleared;
 
+      const subtransactions = tx.subtransactions?.map((stx) => ({
+        amount: Math.round(stx.amount * 1000),
+        payee_id: stx.payeeId,
+        category_id: stx.categoryId,
+        memo: stx.memo,
+      }));
+
       transactions.push({
-        id: tx.id,
+        id: tx.id !== undefined ? tx.id : undefined,
         import_id: tx.importId,
         account_id: tx.accountId,
         date: tx.date,
@@ -96,6 +124,7 @@ class UpdateTransactionsTool extends MCPTool<UpdateTransactionsInput> {
         cleared: clearedStatus,
         approved: tx.approved,
         flag_color: tx.flagColor as ynab.TransactionFlagColor,
+        subtransactions,
       });
     }
 

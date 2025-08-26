@@ -12,7 +12,7 @@ class UpdateTransactionsTool extends MCPTool {
         transactions: {
             type: z
                 .array(z.object({
-                id: z.string().optional(),
+                id: z.string().nullable().optional(),
                 importId: z.string().optional(),
                 accountId: z.string().optional(),
                 date: z.string().optional(),
@@ -23,6 +23,14 @@ class UpdateTransactionsTool extends MCPTool {
                 cleared: z.boolean().optional(),
                 approved: z.boolean().optional(),
                 flagColor: z.string().optional(),
+                subtransactions: z
+                    .array(z.object({
+                    amount: z.number(),
+                    payeeId: z.string().optional(),
+                    categoryId: z.string().optional(),
+                    memo: z.string().optional(),
+                }))
+                    .optional(),
             }))
                 .min(1),
             description: "Array of transactions to update. Each must include either id or importId",
@@ -42,6 +50,9 @@ class UpdateTransactionsTool extends MCPTool {
         }
         const transactions = [];
         for (const tx of input.transactions) {
+            if (tx.id && tx.importId) {
+                return "Each transaction must specify either an id or an importId, but not both";
+            }
             if (!tx.id && !tx.importId) {
                 return "Each transaction must specify either an id or an importId";
             }
@@ -50,8 +61,14 @@ class UpdateTransactionsTool extends MCPTool {
                 : tx.cleared
                     ? ynab.TransactionClearedStatus.Cleared
                     : ynab.TransactionClearedStatus.Uncleared;
+            const subtransactions = tx.subtransactions?.map((stx) => ({
+                amount: Math.round(stx.amount * 1000),
+                payee_id: stx.payeeId,
+                category_id: stx.categoryId,
+                memo: stx.memo,
+            }));
             transactions.push({
-                id: tx.id,
+                id: tx.id !== undefined ? tx.id : undefined,
                 import_id: tx.importId,
                 account_id: tx.accountId,
                 date: tx.date,
@@ -62,6 +79,7 @@ class UpdateTransactionsTool extends MCPTool {
                 cleared: clearedStatus,
                 approved: tx.approved,
                 flag_color: tx.flagColor,
+                subtransactions,
             });
         }
         try {
